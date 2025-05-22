@@ -1,13 +1,20 @@
 import express from "express";
 import cors from "cors";
 
+// Import routes directly
+import userRoute from "./routes/user.js";
+import authRoute from "./routes/authroute.js";
+import gameroute from "./routes/gamesroute.js";
+import quizroute from "./routes/quizroute.js";
+import scoreroute from "./routes/gamescoreroute.js";
+
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 
-// Simple health check route
+// Health check route
 app.get("/", (req, res) => {
   try {
     res.json({
@@ -21,40 +28,38 @@ app.get("/", (req, res) => {
   }
 });
 
-// Import and use routes only after basic setup
-let routesLoaded = false;
-
-const loadRoutes = async () => {
-  if (routesLoaded) return;
-
-  try {
-    const { default: userRoute } = await import("./routes/user.js");
-    const { default: authRoute } = await import("./routes/authroute.js");
-    const { default: gameroute } = await import("./routes/gamesroute.js");
-    const { default: quizroute } = await import("./routes/quizroute.js");
-    const { default: scoreroute } = await import("./routes/gamescoreroute.js");
-
-    app.use("/api/user", userRoute);
-    app.use("/api/auth", authRoute);
-    app.use("/api/games", gameroute);
-    app.use("/api/quiz", quizroute);
-    app.use("/api/gamesscore", scoreroute);
-
-    routesLoaded = true;
-  } catch (error) {
-    console.error("Error loading routes:", error);
-  }
-};
-
-// Load routes for any API call
-app.use("/api/*", async (req, res, next) => {
-  await loadRoutes();
-  next();
+// Test endpoint for environment variables
+app.get("/api/test", (req, res) => {
+  res.json({
+    message: "API is working!",
+    hasDBUrl: !!process.env.DATABASE_URL,
+    hasJWTSecret: !!process.env.JWT_SECRET,
+    nodeEnv: process.env.NODE_ENV,
+  });
 });
+
+// API Routes
+app.use("/api/user", userRoute);
+app.use("/api/auth", authRoute);
+app.use("/api/games", gameroute);
+app.use("/api/quiz", quizroute);
+app.use("/api/gamesscore", scoreroute);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: "Route not found", path: req.path });
+  res.status(404).json({
+    error: "Route not found",
+    path: req.path,
+    method: req.method,
+    availableRoutes: [
+      "GET /",
+      "GET /api/test",
+      "POST /api/user/login",
+      "POST /api/user/signup",
+      "GET /api/games/getgames",
+      "GET /api/quiz/getquizzes",
+    ],
+  });
 });
 
 // Error handler

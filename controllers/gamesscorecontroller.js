@@ -1,4 +1,4 @@
-import db from "../index.js";
+import db from "../lib/db.js";
 export const saveGameScore = async (req, res) => {
   try {
     // Extract user_id from the verified token

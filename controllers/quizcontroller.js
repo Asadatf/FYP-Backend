@@ -1,4 +1,4 @@
-import db from "../index.js";
+import db from "../lib/db.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 dotenv.config();

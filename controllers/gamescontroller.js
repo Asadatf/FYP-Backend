@@ -1,4 +1,4 @@
-import db from "../index.js";
+import db from "../lib/db.js";
 
 export const createGame = async (req, res) => {
   try {
