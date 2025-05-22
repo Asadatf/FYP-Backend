@@ -1,59 +1,69 @@
 import express from "express";
-import mysql from "mysql";
-import dotenv from "dotenv";
 import cors from "cors";
-import pkg from "pg";
-
-import userRoute from "./routes/user.js";
-import authRoute from "./routes/authroute.js";
-import gameroute from "./routes/gamesroute.js";
-import quizroute from "./routes/quizroute.js";
-import scoreroute from "./routes/gamescoreroute.js";
-
-dotenv.config();
 
 const app = express();
+
+// Middleware
 app.use(express.json());
 app.use(cors());
 
-///using routes
-app.use("/api/user", userRoute);
-app.use("/api/auth", authRoute);
-app.use("/api/games", gameroute);
-app.use("/api/quiz", quizroute);
-app.use("/api/gamesscore", scoreroute);
-
-const { Pool } = pkg;
-const db = new Pool({
-  host: process.env.PG_HOST,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-  database: process.env.PG_DATABASE,
-  ssl: {
-    rejectUnauthorized: false, // Important for Neon
-  },
-});
-
-db.connect((err, client, release) => {
-  if (err) {
-    console.error("❌ Failed to connect to Neon:", err.stack);
-  } else {
-    console.log("✅ Connected to Neon PostgreSQL successfully!");
-    release();
+// Simple health check route
+app.get("/", (req, res) => {
+  try {
+    res.json({
+      message: "CyberFort Backend is running!",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+    });
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(500).json({ error: "Health check failed" });
   }
 });
 
-app.get("/", (req, res) => {
-  res.json("hello");
+// Import and use routes only after basic setup
+let routesLoaded = false;
+
+const loadRoutes = async () => {
+  if (routesLoaded) return;
+
+  try {
+    const { default: userRoute } = await import("./routes/user.js");
+    const { default: authRoute } = await import("./routes/authroute.js");
+    const { default: gameroute } = await import("./routes/gamesroute.js");
+    const { default: quizroute } = await import("./routes/quizroute.js");
+    const { default: scoreroute } = await import("./routes/gamescoreroute.js");
+
+    app.use("/api/user", userRoute);
+    app.use("/api/auth", authRoute);
+    app.use("/api/games", gameroute);
+    app.use("/api/quiz", quizroute);
+    app.use("/api/gamesscore", scoreroute);
+
+    routesLoaded = true;
+  } catch (error) {
+    console.error("Error loading routes:", error);
+  }
+};
+
+// Load routes for any API call
+app.use("/api/*", async (req, res, next) => {
+  await loadRoutes();
+  next();
 });
 
-// For local development
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5500;
-  app.listen(PORT, () => {
-    console.log(`Connected to Backend on port ${PORT}..!!!`);
-  });
-}
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found", path: req.path });
+});
 
-// Export for Vercel
+// Error handler
+app.use((error, req, res, next) => {
+  console.error("Server error:", error);
+  res.status(500).json({
+    error: "Internal server error",
+    message: error.message,
+  });
+});
+
 export default app;
