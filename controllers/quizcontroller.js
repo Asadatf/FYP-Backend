@@ -285,13 +285,21 @@ export const validate_quiz = async (req, res) => {
   }
 };
 
-export const saveQuiz = (req, res) => {
+export const saveQuiz = async (req, res) => {
   try {
     // Extract parameters from request
     const quizId = req.query.quizId;
     const userId = req.query.userId;
     const score = req.body.score;
     const passed = req.body.passed || false;
+
+    // Validate required fields
+    if (!quizId || !userId || score === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Quiz ID, User ID, and score are required",
+      });
+    }
 
     // SQL query to insert quiz attempt
     const query = `
@@ -308,23 +316,14 @@ export const saveQuiz = (req, res) => {
     // Parameters for the query
     const values = [userId, quizId, score, passed];
 
-    // Execute query
-    db.query(query, values, (err, result) => {
-      if (err) {
-        console.error("Error saving quiz attempt:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to save quiz attempt",
-          error: err.message,
-        });
-      }
+    // Execute query with async/await
+    const result = await db.query(query, values);
 
-      // Return success response with saved data
-      return res.status(201).json({
-        success: true,
-        message: "Quiz attempt saved successfully",
-        data: result.rows[0],
-      });
+    // Return success response with saved data
+    return res.status(201).json({
+      success: true,
+      message: "Quiz attempt saved successfully",
+      data: result.rows[0],
     });
   } catch (error) {
     console.error("Error in saveQuiz function:", error);

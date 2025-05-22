@@ -7,6 +7,13 @@ export const signup = async (req, res) => {
   try {
     const { username, email, password, profile_picture } = req.body;
 
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: "Username, email, and password are required",
+      });
+    }
+
     // Check if user already exists
     const existingUser = await db.query(
       "SELECT * FROM users WHERE email = $1",
@@ -14,9 +21,9 @@ export const signup = async (req, res) => {
     );
 
     if (existingUser.rows.length > 0) {
-      return res
-        .status(409)
-        .json({ error: "User already exists with this email" });
+      return res.status(409).json({
+        error: "User already exists with this email",
+      });
     }
 
     // Hash the password
@@ -36,9 +43,11 @@ export const signup = async (req, res) => {
     const userId = result.rows[0].user_id;
 
     // Generate JWT token
-    const token = jwt.sign({ user_id: userId, email }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
+    const token = jwt.sign(
+      { user_id: userId, email, username },
+      process.env.JWT_SECRET || "fallback-secret",
+      { expiresIn: "24h" }
+    );
 
     res.status(201).json({
       message: "User created successfully",
@@ -51,7 +60,10 @@ export const signup = async (req, res) => {
     });
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({ error: "Signup failed" });
+    res.status(500).json({
+      error: "Signup failed",
+      details: error.message,
+    });
   }
 };
 
@@ -60,7 +72,14 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email - using async/await pattern with PostgreSQL
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        error: "Email and password are required",
+      });
+    }
+
+    // Find user by email
     const userResult = await db.query("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
@@ -96,7 +115,7 @@ export const login = async (req, res) => {
         username: user.username,
         email: user.email,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "fallback-secret",
       { expiresIn: "24h" }
     );
 
@@ -106,23 +125,27 @@ export const login = async (req, res) => {
         id: user.user_id,
         username: user.username,
         email: user.email,
-        // profile_picture: user.profile_picture
       },
       token,
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({
+      error: "Login failed",
+      details: error.message,
+    });
   }
 };
 
-//logout funtion
+//logout function
 export const logout = async (req, res) => {
   try {
-    // Optionally, handle token blacklisting (if required)
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout error:", error);
-    res.status(500).json({ error: "Logout failed" });
+    res.status(500).json({
+      error: "Logout failed",
+      details: error.message,
+    });
   }
 };

@@ -1,4 +1,5 @@
 import db from "../lib/db.js";
+
 export const saveGameScore = async (req, res) => {
   try {
     // Extract user_id from the verified token
@@ -8,7 +9,8 @@ export const saveGameScore = async (req, res) => {
     const { game_id, score } = req.body;
 
     console.log("Score Received: ", score);
-    score.to;
+    // REMOVED: score.to; (this was causing syntax error)
+
     // Validate required fields
     if (!game_id || score === undefined) {
       return res.status(400).json({
@@ -63,7 +65,10 @@ export const saveGameScore = async (req, res) => {
     });
   } catch (error) {
     console.error("Save game score error:", error);
-    res.status(500).json({ error: "Failed to save game score" });
+    res.status(500).json({
+      error: "Failed to save game score",
+      details: error.message,
+    });
   }
 };
 
@@ -84,6 +89,9 @@ export const getGameScore = async (req, res) => {
     }
   } catch (error) {
     console.error("Fetch latest score error:", error);
-    res.status(500).json({ error: "Failed to fetch latest score" });
+    res.status(500).json({
+      error: "Failed to fetch latest score",
+      details: error.message,
+    });
   }
 };
